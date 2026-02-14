@@ -19,7 +19,7 @@ DeliveRapid est une application mobile qui permet de gérer facilement les livra
 | Membre | Rôle | Responsabilités |
 |--------|------|-----------------|
 | **[Nom Membre 1]** | UI/UX Designer & Navigation | - Création de tous les écrans<br>- Gestion de la navigation<br>- Design de l'interface utilisateur |
-| **[Nom Membre 2]** | Développeur Data Layer | - Création des modèles (User, Delivery)<br>- Intégration API<br>- Parsing JSON |
+| **Richardson Cliford Cimy** | Développeur Data Layer | - Création des modèles (User, Delivery)<br>- Intégration API<br>- Parsing JSON |
 | **[Jean Marie Rooslyn]** | Développeur Storage | - Mise en place SharedPreferences<br>- Fonctionnalités CRUD<br>- Gestion des images |
 
 ## Technologies utilisées
