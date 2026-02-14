@@ -36,11 +36,11 @@ DeliveRapid est une application mobile qui permet de gérer facilement les livra
 - Créer un compte et se connecter
 - Créer une nouvelle livraison
 - Suivre ses colis
-- Voir l'historique des livraisons
 - Contacter le livreur
 
 ### Fonctionalite a venir
 - Recevoir des notifications
+- Voir l'historique des livraisons
 
 ### Pour les livreurs
 - Voir les livraisons assignées
