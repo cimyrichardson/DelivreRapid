@@ -20,7 +20,7 @@ DeliveRapid est une application mobile qui permet de gérer facilement les livra
 |--------|------|-----------------|
 | **[Nom Membre 1]** | UI/UX Designer & Navigation | - Création de tous les écrans<br>- Gestion de la navigation<br>- Design de l'interface utilisateur |
 | **[Nom Membre 2]** | Développeur Data Layer | - Création des modèles (User, Delivery)<br>- Intégration API<br>- Parsing JSON |
-| **[Nom Membre 3]** | Développeur Storage | - Mise en place SharedPreferences<br>- Fonctionnalités CRUD<br>- Gestion des images |
+| **Richardson Cliford Cimy** | Développeur Storage | - Mise en place SharedPreferences<br>- Fonctionnalités CRUD<br>- Gestion des images |
 
 ## Technologies utilisées
 - **Flutter** : Framework de développement mobile
