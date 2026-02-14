@@ -1,8 +1,5 @@
-// Modèl itilizatè pou aplikasyon DeliveRapid
-// Gere tout enfòmasyon itilizatè yo (kilyan, livre, admin)
-
 class User {
-  // Pwopriyete yo
+  // Attribut Pour User
   final String id;
   final String name;
   final String email;
@@ -15,7 +12,7 @@ class User {
   final bool isActive;
   final Map<String, dynamic>? additionalInfo;
 
-  // Konstriktè prensipal
+  // Constructeur pour User
   User({
     required this.id,
     required this.name,
@@ -30,7 +27,7 @@ class User {
     this.additionalInfo,
   });
 
-  // Konstriktè pou kilyan default
+  // Constructeur pour client par défaut
   User.client({
     required this.id,
     required this.name,
@@ -44,7 +41,7 @@ class User {
     this.additionalInfo,
   }) : role = 'kilyan';
 
-  // Konstriktè pou livre default
+  // Constructeur pour livreur par défaut
   User.driver({
     required this.id,
     required this.name,
@@ -58,7 +55,7 @@ class User {
     this.additionalInfo,
   }) : role = 'livre';
 
-  // Konstriktè pou admin default
+  // Constructeur pour admin par défaut
   User.admin({
     required this.id,
     required this.name,
@@ -72,7 +69,7 @@ class User {
     this.additionalInfo,
   }) : role = 'admin';
 
-  // Konvèti JSON an objè User
+  // Factory constructor pour créer un User à partir d'un JSON
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       id: json['id']?.toString() ?? '',
@@ -91,7 +88,7 @@ class User {
     );
   }
 
-  // Konvèti objè User an JSON
+  // Convertir un User en JSON
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -108,7 +105,7 @@ class User {
     };
   }
 
-  // Kreye yon kopi User ak kèk modifikasyon
+  // Creation d'une copie du User avec des modifications optionnelles
   User copyWith({
     String? name,
     String? email,
@@ -136,12 +133,12 @@ class User {
     );
   }
 
-  // Metòd util pou verifye wòl itilizatè a
+  // Methodes pour vérifier le rôle de l'utilisateur
   bool get isClient => role == 'kilyan';
   bool get isDriver => role == 'livre';
   bool get isAdmin => role == 'admin';
 
-  // Jwenn non an an majiskil
+  // Nom capitalisé (pour affichage)
   String get capitalizedName {
     if (name.isEmpty) return '';
     return name.split(' ').map((word) {
@@ -150,7 +147,7 @@ class User {
     }).join(' ');
   }
 
-  // Inisyal non an (pou avatar)
+  // Initiales du nom (pour avatar)
   String get initials {
     if (name.isEmpty) return '?';
     List<String> parts = name.split(' ');

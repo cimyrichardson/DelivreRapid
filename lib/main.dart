@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'screens/splash_screen.dart';
+// import 'screens/splash_screen.dart';
+import 'screens/test_screen.dart';
 
 void main() {
   runApp(const DelivreRapidApp());
@@ -47,7 +48,9 @@ class DelivreRapidApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const SplashScreen(),
+      // --- POUR LES TESTS ---
+        home: const TestScreen(),
+      // home: const SplashScreen(),
     );
   }
 }

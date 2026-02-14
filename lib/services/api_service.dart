@@ -7,12 +7,12 @@ class ApiService {
   // API DummyJSON base URL
   static const String baseUrl = 'https://dummyjson.com';
   
-  // Timeout pou rekèt yo (10 segond)
+  // Timeout pou requêtes HTTP
   static const Duration timeout = Duration(seconds: 10);
 
-  // --- FONKSYON ITILIZATÈ (USERS) ---
+  //--- Fonctions pour les utilisateurs (Users) ---
 
-  // 1. Jwenn tout itilizatè yo
+  // 1. Recuperation de tous les utilisateurs
   Future<List<User>> fetchAllUsers() async {
     try {
       final response = await http
@@ -37,7 +37,7 @@ class ApiService {
     }
   }
 
-  // 2. Jwenn yon itilizatè pa ID
+  // 2. Recuperation d'un utilisateur par ID
   Future<User?> fetchUserById(String id) async {
     try {
       final response = await http
@@ -56,7 +56,7 @@ class ApiService {
     }
   }
 
-  // 3. Chèche itilizatè
+  // 3. Recherche d'utilisateurs par nom ou email
   Future<List<User>> searchUsers(String query) async {
     try {
       final response = await http
@@ -81,10 +81,12 @@ class ApiService {
     }
   }
 
-  // --- FONKSYON LIVREZON (DELIVERIES) ---
-  // Note: DummyJSON pa gen /deliveries, nou ap adapte /carts
+  // --- Fonctions pour les livraisons (Deliveries) ---
+  // Note: DummyJSON ne dispose pas d'une API spécifique pour les livraisons, 
+  //donc nous allons utiliser les endpoints de "carts" pour simuler les livraisons. 
+  //Nous allons adapter les données des carts pour correspondre à notre modèle de Delivery.
 
-  // 4. Jwenn tout livrezon yo
+  // 4. Recuperation de toutes les livraisons
   Future<List<Delivery>> fetchAllDeliveries() async {
     try {
       final response = await http
@@ -96,7 +98,7 @@ class ApiService {
         List<Delivery> deliveries = [];
         
         for (var item in data['carts']) {
-          // Adapte done yo pou koresponn ak modèl Delivery
+          // Adapte les données du cart pour créer une Delivery
           Delivery delivery = _adaptCartToDelivery(item);
           deliveries.add(delivery);
         }
@@ -111,7 +113,7 @@ class ApiService {
     }
   }
 
-  // 5. Jwenn yon livrezon pa ID
+  // 5. Recuperation d'une livraison par ID
   Future<Delivery?> fetchDeliveryById(String id) async {
     try {
       final response = await http
@@ -130,7 +132,7 @@ class ApiService {
     }
   }
 
-  // 6. Jwenn livrezon pou yon itilizatè
+  // 6. Recuperation des livraisons d'un utilisateur spécifique
   Future<List<Delivery>> fetchDeliveriesByUser(String userId) async {
     try {
       final response = await http
@@ -155,7 +157,7 @@ class ApiService {
     }
   }
 
-  // --- FONKSYON OTANTIFIKASYON (AUTH) ---
+  // --- Fonctions pour l'authentification (Authentication) ---
 
   // 7. Connexion
   Future<Map<String, dynamic>> login(String username, String password) async {
@@ -172,7 +174,7 @@ class ApiService {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         
-        // Ajoute enfòmasyon siplemantè
+        // Ajouter des informations supplémentaires pour la session
         data['isLoggedIn'] = true;
         data['role'] = _determineRoleFromUsername(username);
         
@@ -195,7 +197,7 @@ class ApiService {
     }
   }
 
-  // 8. Jwenn itilizatè aktyèl la (apre connexion)
+  // 8. Obtenir les informations de l'utilisateur connecté
   Future<User?> getCurrentUser(String token) async {
     try {
       final response = await http.get(
@@ -217,11 +219,10 @@ class ApiService {
     }
   }
 
-  // --- FONKSYON KREYATIF (POU DEMO) ---
+  // --- Fonctions pour la gestion des livraisons (Deliveries) ---
 
-  // 9. Kreye yon nouvo livrezon (simile)
+  // 9. Créer une nouvelle livraison
   Future<Map<String, dynamic>> createDelivery(Map<String, dynamic> deliveryData) async {
-    // Paske DummyJSON pa pèmèt kreye livrezon, nou ap simulation
     await Future.delayed(const Duration(seconds: 1));
     
     return {
@@ -237,9 +238,8 @@ class ApiService {
     };
   }
 
-  // 10. Mete ajou estati livrezon
+  // 10. Mettre à jour le statut d'une livraison
   Future<Map<String, dynamic>> updateDeliveryStatus(String id, String status) async {
-    // Simulation
     await Future.delayed(const Duration(seconds: 1));
     
     return {
@@ -253,11 +253,10 @@ class ApiService {
     };
   }
 
-  // --- FONKSYON PRIVE ---
+  // --- Fonctions utilitaires ---
 
-  // Adapte yon objè cart an livrezon
+  // Adapter les données d'un cart pour créer une Delivery
   Delivery _adaptCartToDelivery(Map<String, dynamic> cart) {
-    // Jwenn total pwa a (simile)
     double totalWeight = 0;
     if (cart['products'] != null) {
       for (var product in cart['products']) {
@@ -265,10 +264,12 @@ class ApiService {
       }
     }
     
-    // Si pa gen pwa, bay yon valè default
+    // Si le poids total est de 0 (ce qui peut arriver si les produits n'ont pas de poids défini), 
+    //on attribue un poids par défaut de 2.5 kg
     if (totalWeight == 0) totalWeight = 2.5;
 
-    // Non kilyan an
+    // Déterminer le nom du client à partir de l'ID de l'utilisateur, 
+    //ou utiliser un nom générique si l'ID n'est pas disponible
     String customerName = 'Client ${cart['userId'] ?? 'inconnu'}';
 
     return Delivery(
@@ -294,15 +295,15 @@ class ApiService {
     );
   }
 
-  // Detèmine estati livrezon selon done cart la
+  // Déterminer le statut de la livraison à partir des données du cart (pour simulation)
   String _determineStatusFromCart(Map<String, dynamic> cart) {
     List<String> statuses = ['an_trete', 'an_wout', 'livre', 'annile'];
-    // Sèvi ak id a pou detèmine yon estati konsistan
+    // Utiliser l'ID du cart pour déterminer un statut de manière pseudo-aléatoire
     int index = (cart['id'] ?? 1) % 4;
     return statuses[index];
   }
 
-  // Detèmine wòl selon non itilizatè (pou demo)
+  // Déterminer le rôle de l'utilisateur à partir de son nom d'utilisateur (pour simulation)
   String _determineRoleFromUsername(String username) {
     String lowerUsername = username.toLowerCase();
     if (lowerUsername.contains('admin')) {
@@ -314,7 +315,7 @@ class ApiService {
     }
   }
 
-  // Metòd pou verifye si gen entènèt
+  // Vérifier la connexion Internet
   Future<bool> hasInternetConnection() async {
     try {
       final response = await http

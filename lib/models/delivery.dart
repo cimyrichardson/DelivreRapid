@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class Delivery {
-  // Pwopriyete prensipal yo
+  // Attributs de base pour une livraison
   final String id;
   final String trackingNumber;
   final String customerName;
@@ -14,15 +14,15 @@ class Delivery {
   final double? deliveryLatitude;
   final double? deliveryLongitude;
   
-  // Detay kolye a
+  // Details du colis
   final double packageWeight;
-  final Map<String, double>? packageDimensions; // length, width, height
+  final Map<String, double>? packageDimensions; // ex: {'longueur': 10, 'largeur': 5, 'hauteur': 3}
   final String packageDescription;
   final String? packageImage;
   
-  // Estati ak asiyasyon
+  // Statut et assignation
   final String status; // "an_trete", "an_wout", "livre", "annile"
-  final String? assignedTo; // ID livrè a
+  final String? assignedTo; // ID du livreur assigné
   final String? assignedDriverName;
   final String? assignedDriverPhone;
   
@@ -32,17 +32,17 @@ class Delivery {
   final DateTime createdAt;
   final DateTime? updatedAt;
   
-  // Lòt enfòmasyon
+  // Informations Suplementaires
   final String? createdBy;
   final String? notes;
   final double? price;
   final bool isPaid;
-  final double? distance; // an km
-  final int? estimatedDuration; // an minit
+  final double? distance; // en kilomètres
+  final int? estimatedDuration; // en minutes
   final List<Map<String, dynamic>>? statusHistory;
   final Map<String, dynamic>? additionalInfo;
 
-  // Konstriktè prensipal
+  // Constructeur Principal pour Delivery
   Delivery({
     required this.id,
     required this.trackingNumber,
@@ -77,18 +77,14 @@ class Delivery {
     this.additionalInfo,
   });
 
-  // Konvèti JSON an objè Delivery (pou DummyJSON)
+  // Factory constructor pour créer une Delivery à partir d'un JSON
   factory Delivery.fromJson(Map<String, dynamic> json) {
-    // Adapte selon estrikti DummyJSON
-    // Sipoze n ap itilize /carts endpoint
-    
-    // Jwenn non kilyan an (si genyen)
     String customerName = 'Client';
     if (json['userId'] != null) {
       customerName = 'Client ${json['userId']}';
     }
     
-    // Jwenn dat yo
+    // Si l'ID n'est pas fourni, on génère un ID unique basé sur le timestamp actuel
     DateTime now = DateTime.now();
     
     return Delivery(
@@ -138,7 +134,7 @@ class Delivery {
     );
   }
 
-  // Konvèti objè Delivery an JSON
+  // Convertir une Delivery en JSON
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -175,7 +171,7 @@ class Delivery {
     };
   }
 
-  // Kreye yon kopi Delivery ak kèk modifikasyon
+  // Créer une copie de la Delivery avec des modifications optionnelles
   Delivery copyWith({
     String? status,
     String? assignedTo,
@@ -222,13 +218,13 @@ class Delivery {
     );
   }
 
-  // Metòd pou verifye estati
+  // Methodes pour vérifier le statut de la livraison
   bool get isPending => status == 'an_trete';
   bool get isInTransit => status == 'an_wout';
   bool get isDelivered => status == 'livre';
   bool get isCancelled => status == 'annile';
   
-  // Jwenn koulè selon estati
+  // Obtenir la couleur associée au statut
   Color get statusColor {
     switch (status) {
       case 'an_trete':
@@ -244,7 +240,7 @@ class Delivery {
     }
   }
 
-  // Jwenn tèks estati an françai
+  // Obtenir le texte lisible du statut
   String get statusText {
     switch (status) {
       case 'an_trete':
@@ -260,7 +256,7 @@ class Delivery {
     }
   }
 
-  // Ajoute yon nouvo estati nan istorik
+  // Ajouter une entrée à l'historique des statuts
   Delivery addStatusToHistory(String newStatus) {
     List<Map<String, dynamic>> newHistory = statusHistory ?? [];
     newHistory.add({
