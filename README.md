@@ -4,7 +4,7 @@
 **DelivreRapid** - Application de gestion de livraison
 
 ## Objectif de l'application
-DeliveRapid est une application mobile qui permet de gérer facilement les livraisons de colis. Elle offre une plateforme complète pour les clients, les livreurs et les administrateurs. Les utilisateurs peuvent créer des livraisons, suivre leurs colis en temps réel, tandis que les livreurs peuvent gérer leurs tournées et les administrateurs superviser toutes les opérations.
+DelivreRapid est une application mobile qui permet de gérer facilement les livraisons de colis. Elle offre une plateforme complète pour les clients, les livreurs et les administrateurs. Les utilisateurs peuvent créer des livraisons, suivre leurs colis en temps réel, tandis que les livreurs peuvent gérer leurs tournées et les administrateurs superviser toutes les opérations.
 
 
 ## Problèmes résolus
