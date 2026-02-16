@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/colors.dart';
+import '../models/notif.dart';
 
 class kliyan extends StatefulWidget {
   const kliyan({super.key});
@@ -56,32 +56,6 @@ class _kliyanState extends State<kliyan> {
 
           elevation: 4.0,
         ),
-
-
-        body: Center(
-    child: Column(
-    mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-    Center(
-    child: Image.asset(
-    'assets/images/logo.png',
-      width: 300,
-      color: Colors.white.withValues(alpha: 0.5),
-      colorBlendMode: BlendMode.modulate,
-    ),
-      ),
-      ]
-    ),
-    ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ajou()),
-        );},
-        tooltip: 'ajouter',
-        backgroundColor: Color(0xFFFF6B35),
-        child: const Icon(Icons.add),
-      ),
       drawer: Drawer(
         child: ListView(
           children: [
@@ -114,6 +88,91 @@ class _kliyanState extends State<kliyan> {
           ],
         ),
       ),
+
+        body:
+
+        Stack(
+          children: [
+            // --- COUCHE 1 : Ton Logo en fond ---
+            Center(
+              child: Image.asset(
+                'assets/images/logo.png',
+                width: 300,
+                // On garde tes réglages d'opacité
+                color: Colors.white.withValues(alpha: 0.5),
+                colorBlendMode: BlendMode.modulate,
+              ),
+            ),
+
+            // --- COUCHE 2 : Ta liste de Cards ---
+            // On utilise ListView pour que les cartes puissent défiler par-dessus le logo
+            ListView(
+              padding: const EdgeInsets.all(16.0),
+              children: [
+                Card(
+                  elevation: 3,
+                  // L'ombre sous la fiche
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  // Espace autour de la fiche
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  // Coins arrondis
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0), // Espace interne
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      // Aligne le texte à gauche
+                      children: [
+                        // Ligne du haut : Date et Statut
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "Enregistré le : 15/02/2026",
+                              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                            ),
+                            fom_st("an wout"), // Fonction pour le badge de couleur
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Nom de la personne
+                        Text(
+                          "Enregistré par : Jean Dupont",
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Description du colis
+                        const Text(
+                          "Description :",
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600, color: Colors.blueGrey),
+                        ),
+                        Text(
+                          "Colis de 5kg contenant des composants électroniques fragiles.",
+                          style: TextStyle(color: Colors.black87),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ajou()),
+            );
+          },
+          tooltip: 'ajouter',
+          backgroundColor: const Color(0xFFFF6B35),
+          child: const Icon(Icons.add),
+        ),
     );
   }
 }
@@ -265,7 +324,11 @@ class _ajouState extends State<ajou> {
 
 
  void kreye() {
-    print("ou kreye");
+   // 1. Ajouter la notification au système
+   NotificationManager.addNotification("nouvo livrezon kreye pou ..."); //ajoute variab nom an
+
+   // 2. Retourner à la page précédente
+   Navigator.pop(context);
   }
   @override
   Widget build(BuildContext context) {
@@ -390,7 +453,7 @@ class _ajouState extends State<ajou> {
 
             const SizedBox(height: 30),
 
-            // --- BOUTON DE CONNEXION ---
+
             SizedBox(
               width: double.infinity, // Le bouton prend toute la largeur
               height: 55,
