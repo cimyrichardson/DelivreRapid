@@ -15,7 +15,7 @@ class _signState extends State<sign> {
   final TextEditingController imel = TextEditingController();
   final TextEditingController pasword = TextEditingController();
   final TextEditingController konf = TextEditingController();
-
+  final TextEditingController nom = TextEditingController();
   bool isValidEmail(String email) {
     return RegExp(r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
         .hasMatch(email);
@@ -79,6 +79,20 @@ class _signState extends State<sign> {
             ),
 
             const SizedBox(height: 50),
+
+            TextField(
+              controller: nom, // nou rekipere nom moun lan
+              // C'est ici que le clavier s'adapte pour l'email (touche @ visible)
+              keyboardType: TextInputType.text,
+              decoration: const InputDecoration(
+                labelText: 'Non',
+                prefixIcon: Icon(Icons.email_outlined),
+                border: OutlineInputBorder(), // Bordure autour du champ
+
+
+              ),
+            ),
+            const SizedBox(height: 20),
 
             // --- CHAMP EMAIL ---
             TextField(
