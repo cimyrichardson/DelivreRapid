@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'screens/splash_screen.dart';
-
+import 'screens/kliyan_screen.dart';
 void main() {
   runApp(const DelivreRapidApp());
 }
@@ -13,16 +13,8 @@ class DelivreRapidApp extends StatelessWidget {
     return MaterialApp(
       title: 'DelivreRapid',
       debugShowCheckedModeBanner: false,
-      home: const splash(),
+      home:const kliyan()//splash(),
     );
   }
 }
 
-// Couleurs personnalisées pour l'application
-class AppColors {
-  static const Color orange = Color(0xFFFF6B35);
-  static const Color blue = Color(0xFF2C3E50);
-  static const Color grey = Color(0xFFF5F5F5);
-  static const Color white = Colors.white;
-  static const Color black = Colors.black54;
-}
