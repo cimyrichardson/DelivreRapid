@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/colors.dart';
+import '../models/notif.dart';
 
 class kliyan extends StatefulWidget {
   const kliyan({super.key});
@@ -324,7 +324,11 @@ class _ajouState extends State<ajou> {
 
 
  void kreye() {
-    print("ou kreye");
+   // 1. Ajouter la notification au système
+   NotificationManager.addNotification("nouvo livrezon kreye pou ..."); //ajoute variab nom an
+
+   // 2. Retourner à la page précédente
+   Navigator.pop(context);
   }
   @override
   Widget build(BuildContext context) {
@@ -449,7 +453,7 @@ class _ajouState extends State<ajou> {
 
             const SizedBox(height: 30),
 
-            // --- BOUTON DE CONNEXION ---
+
             SizedBox(
               width: double.infinity, // Le bouton prend toute la largeur
               height: 55,
