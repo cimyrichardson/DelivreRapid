@@ -13,7 +13,7 @@ class DelivreRapidApp extends StatelessWidget {
     return MaterialApp(
       title: 'DelivreRapid',
       debugShowCheckedModeBanner: false,
-      home:const kliyan()//splash(),
+      home:const splash(),
     );
   }
 }
