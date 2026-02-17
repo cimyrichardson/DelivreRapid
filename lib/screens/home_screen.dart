@@ -130,7 +130,7 @@ class _HomeScreenState extends State<HomeScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('DeliveRapid'),
+          title: const Text('DelivreRapid'),
           backgroundColor: const Color(0xFFFF6B35),
           actions: [
             // Bouton pour basculer vers le dashboard selon le rôle (visible seulement pour admin/livreur)

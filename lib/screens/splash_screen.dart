@@ -43,7 +43,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 30),
             const Text(
-              'DeliveRapid',
+              'DelivreRapid',
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
