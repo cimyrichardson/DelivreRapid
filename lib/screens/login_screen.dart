@@ -210,18 +210,10 @@ class _LoginScreenState extends State<LoginScreen> {
               
               // Logo
               Center(
-                child: Container(
+                child: Image.asset(
+                  'assets/images/logo.png',
                   width: 100,
                   height: 100,
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.delivery_dining,
-                    size: 60,
-                    color: Color(0xFFFF6B35),
-                  ),
                 ),
               ),
               
@@ -438,30 +430,30 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 20),
               
               // Comptes de démonstration
-              Container(
-                margin: const EdgeInsets.only(top: 20),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Comptes de démonstration:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2C3E50),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildDemoAccount('Client', 'test@test.com', 'password'),
-                    _buildDemoAccount('Admin', 'admin@test.com', 'password'),
-                    _buildDemoAccount('Livreur', 'livreur@test.com', 'password'),
-                  ],
-                ),
-              ),
+              // Container(
+              //   margin: const EdgeInsets.only(top: 20),
+              //   padding: const EdgeInsets.all(16),
+              //   decoration: BoxDecoration(
+              //     color: Colors.grey.shade100,
+              //     borderRadius: BorderRadius.circular(10),
+              //   ),
+              //   child: Column(
+              //     crossAxisAlignment: CrossAxisAlignment.start,
+              //     children: [
+              //       const Text(
+              //         'Comptes de démonstration:',
+              //         style: TextStyle(
+              //           fontWeight: FontWeight.bold,
+              //           color: Color(0xFF2C3E50),
+              //         ),
+              //       ),
+              //       const SizedBox(height: 8),
+              //       _buildDemoAccount('Client', 'test@test.com', 'password'),
+              //       _buildDemoAccount('Admin', 'admin@test.com', 'password'),
+              //       _buildDemoAccount('Livreur', 'livreur@test.com', 'password'),
+              //     ],
+              //   ),
+              // ),
             ],
           ),
         ),
