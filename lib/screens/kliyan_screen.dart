@@ -1,3 +1,4 @@
+import 'package:delivrerapid/screens/splash_screen.dart';
 import 'package:flutter/material.dart';
 import '../models/notif.dart';
 
@@ -82,6 +83,17 @@ class _kliyanState extends State<kliyan> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const istorik()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.close),
+              title: const Text("Dekonekte"),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const splash()),
                 );
               },
             ),
