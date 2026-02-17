@@ -10,29 +10,39 @@ class StorageService {
   StorageService._internal();
 
   late SharedPreferences _prefs;
-  final _secureStorage = const FlutterSecureStorage();
+  late FlutterSecureStorage _secureStorage;
+  
+  bool _isInitialized = false;
 
-  static const String KEY_USER = 'currentUser';
-  static const String KEY_DELIVERIES = 'deliveries';
-  static const String KEY_DRIVERS = 'drivers';
-  static const String KEY_SETTINGS = 'settings';
-  static const String KEY_LAST_SYNC = 'lastSync';
-
+  // Initialiser le service (à appeler dans main.dart)
   Future<void> init() async {
-    _prefs = await SharedPreferences.getInstance();
+    if (!_isInitialized) {
+      _prefs = await SharedPreferences.getInstance();
+      _secureStorage = const FlutterSecureStorage();
+      _isInitialized = true;
+    }
+  }
+
+  // Vérifier que le service est initialisé
+  Future<void> _ensureInitialized() async {
+    if (!_isInitialized) {
+      await init();
+    }
   }
 
   // USER
   Future<void> saveUser(User user) async {
+    await _ensureInitialized();
     final json = jsonEncode(user.toJson());
-    await _prefs.setString(KEY_USER, json);
+    await _prefs.setString('currentUser', json);
     if (user.token != null) {
       await _secureStorage.write(key: 'auth_token', value: user.token);
     }
   }
 
   Future<User?> getUser() async {
-    final json = _prefs.getString(KEY_USER);
+    await _ensureInitialized();
+    final json = _prefs.getString('currentUser');
     if (json != null) {
       return User.fromJson(jsonDecode(json));
     }
@@ -40,18 +50,21 @@ class StorageService {
   }
 
   Future<void> clearUser() async {
-    await _prefs.remove(KEY_USER);
+    await _ensureInitialized();
+    await _prefs.remove('currentUser');
     await _secureStorage.delete(key: 'auth_token');
   }
 
   // DELIVERIES
   Future<void> saveDeliveries(List<Delivery> deliveries) async {
+    await _ensureInitialized();
     final jsonList = deliveries.map((d) => d.toJson()).toList();
-    await _prefs.setString(KEY_DELIVERIES, jsonEncode(jsonList));
+    await _prefs.setString('deliveries', jsonEncode(jsonList));
   }
 
   Future<List<Delivery>> getDeliveries() async {
-    final json = _prefs.getString(KEY_DELIVERIES);
+    await _ensureInitialized();
+    final json = _prefs.getString('deliveries');
     if (json != null) {
       final List<dynamic> list = jsonDecode(json);
       return list.map((item) => Delivery.fromJson(item)).toList();
@@ -60,12 +73,14 @@ class StorageService {
   }
 
   Future<void> addDelivery(Delivery delivery) async {
+    await _ensureInitialized();
     final deliveries = await getDeliveries();
     deliveries.add(delivery);
     await saveDeliveries(deliveries);
   }
 
   Future<void> updateDelivery(Delivery updatedDelivery) async {
+    await _ensureInitialized();
     final deliveries = await getDeliveries();
     final index = deliveries.indexWhere((d) => d.id == updatedDelivery.id);
     if (index != -1) {
@@ -75,6 +90,7 @@ class StorageService {
   }
 
   Future<void> deleteDelivery(String id) async {
+    await _ensureInitialized();
     final deliveries = await getDeliveries();
     deliveries.removeWhere((d) => d.id == id);
     await saveDeliveries(deliveries);
@@ -82,11 +98,13 @@ class StorageService {
 
   // SETTINGS
   Future<void> saveSettings(Map<String, dynamic> settings) async {
-    await _prefs.setString(KEY_SETTINGS, jsonEncode(settings));
+    await _ensureInitialized();
+    await _prefs.setString('settings', jsonEncode(settings));
   }
 
   Future<Map<String, dynamic>> getSettings() async {
-    final json = _prefs.getString(KEY_SETTINGS);
+    await _ensureInitialized();
+    final json = _prefs.getString('settings');
     if (json != null) {
       return jsonDecode(json);
     }
@@ -100,13 +118,15 @@ class StorageService {
 
   // LAST SYNC
   Future<void> updateLastSync(String key) async {
+    await _ensureInitialized();
     final syncData = await getLastSync();
     syncData[key] = DateTime.now().toIso8601String();
-    await _prefs.setString(KEY_LAST_SYNC, jsonEncode(syncData));
+    await _prefs.setString('lastSync', jsonEncode(syncData));
   }
 
   Future<Map<String, dynamic>> getLastSync() async {
-    final json = _prefs.getString(KEY_LAST_SYNC);
+    await _ensureInitialized();
+    final json = _prefs.getString('lastSync');
     if (json != null) {
       return jsonDecode(json);
     }
@@ -115,11 +135,13 @@ class StorageService {
 
   // TOKEN SECURE
   Future<String?> getToken() async {
+    await _ensureInitialized();
     return await _secureStorage.read(key: 'auth_token');
   }
 
   // CLEAR ALL
   Future<void> clearAll() async {
+    await _ensureInitialized();
     await _prefs.clear();
     await _secureStorage.deleteAll();
   }

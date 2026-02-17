@@ -1,5 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'login_screen.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -16,10 +17,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  late final FlutterSecureStorage _secureStorage;
+
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   String _selectedRole = 'kilyan';
   bool _isLoading = false;
+  bool _acceptTerms = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _secureStorage = const FlutterSecureStorage();
+  }
 
   @override
   void dispose() {
@@ -31,27 +41,111 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  // Charger les utilisateurs existants
+  Future<Map<String, Map<String, String>>> _loadRegisteredUsers() async {
+    try {
+      final saved = await _secureStorage.read(key: 'registered_users');
+      if (saved != null) {
+        final Map<String, dynamic> decoded = jsonDecode(saved);
+        final Map<String, Map<String, String>> result = {};
+        decoded.forEach((key, value) {
+          result[key] = Map<String, String>.from(value);
+        });
+        return result;
+      }
+    } catch (e) {
+      print('Erreur chargement users: $e');
+    }
+    
+    // Utilisateurs par défaut
+    return {
+      'test@test.com': {
+        'password': 'password',
+        'name': 'Client Test',
+        'phone': '509 1234 5678',
+        'role': 'kilyan',
+      },
+      'admin@test.com': {
+        'password': 'password',
+        'name': 'Admin',
+        'phone': '509 8765 4321',
+        'role': 'admin',
+      },
+      'livreur@test.com': {
+        'password': 'password',
+        'name': 'Livreur Test',
+        'phone': '509 5555 5555',
+        'role': 'livre',
+      },
+    };
+  }
+
+  // Sauvegarder un nouvel utilisateur
+  Future<bool> _saveRegisteredUser() async {
+    try {
+      final users = await _loadRegisteredUsers();
+      
+      // Vérifier si l'email existe déjà
+      if (users.containsKey(_emailController.text)) {
+        _showErrorSnackBar('Cet email est déjà utilisé');
+        return false;
+      }
+      
+      // Ajouter le nouvel utilisateur
+      users[_emailController.text] = {
+        'password': _passwordController.text,
+        'name': _nameController.text,
+        'phone': _phoneController.text,
+        'role': _selectedRole,
+      };
+      
+      await _secureStorage.write(
+        key: 'registered_users',
+        value: jsonEncode(users),
+      );
+      
+      return true;
+    } catch (e) {
+      _showErrorSnackBar('Erreur: $e');
+      return false;
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
+    
+    if (!_acceptTerms) {
+      _showErrorSnackBar('Veuillez accepter les conditions');
+      return;
+    }
 
     setState(() => _isLoading = true);
 
-    // Simulation inscription
-    await Future.delayed(const Duration(seconds: 2));
+    // Simulation délai réseau
+    await Future.delayed(const Duration(seconds: 1));
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Inscription réussie! Connectez-vous maintenant.'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
-    }
+    // Sauvegarder l'utilisateur
+    final saved = await _saveRegisteredUser();
 
     setState(() => _isLoading = false);
+
+    if (saved && mounted) {
+      // Retourner à l'écran de connexion avec l'email
+      Navigator.of(context).pop({
+        'email': _emailController.text,
+        'success': true,
+      });
+    }
   }
 
   @override
@@ -61,6 +155,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       appBar: AppBar(
         title: const Text('Inscription'),
         backgroundColor: const Color(0xFFFF6B35),
+        foregroundColor: Colors.white,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -78,7 +173,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     color: Color(0xFF2C3E50),
                   ),
                 ),
+                
                 const SizedBox(height: 30),
+                
+                // Nom complet
                 TextFormField(
                   controller: _nameController,
                   decoration: InputDecoration(
@@ -93,10 +191,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Veuillez entrer votre nom';
                     }
+                    if (value.length < 2) {
+                      return 'Nom trop court';
+                    }
                     return null;
                   },
                 ),
-                const SizedBox(height: 20),
+                
+                const SizedBox(height: 16),
+                
+                // Email
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -112,19 +216,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Veuillez entrer votre email';
                     }
-                    if (!value.contains('@')) {
+                    if (!value.contains('@') || !value.contains('.')) {
                       return 'Email invalide';
                     }
                     return null;
                   },
                 ),
-                const SizedBox(height: 20),
+                
+                const SizedBox(height: 16),
+                
+                // Téléphone
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
                   decoration: InputDecoration(
                     labelText: 'Téléphone',
-                    hintText: 'Entrez votre numéro',
+                    hintText: 'Ex: 509 1234 5678',
                     prefixIcon: const Icon(Icons.phone_outlined),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -134,10 +241,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Veuillez entrer votre téléphone';
                     }
+                    if (value.length < 8) {
+                      return 'Numéro invalide';
+                    }
                     return null;
                   },
                 ),
-                const SizedBox(height: 20),
+                
+                const SizedBox(height: 16),
+                
+                // Mot de passe
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
@@ -171,7 +284,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 20),
+                
+                const SizedBox(height: 16),
+                
+                // Confirmer mot de passe
                 TextFormField(
                   controller: _confirmPasswordController,
                   obscureText: _obscureConfirmPassword,
@@ -205,7 +321,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     return null;
                   },
                 ),
+                
                 const SizedBox(height: 20),
+                
+                // Rôle
                 const Text(
                   'Vous êtes:',
                   style: TextStyle(
@@ -214,7 +333,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     color: Color(0xFF2C3E50),
                   ),
                 ),
+                
                 const SizedBox(height: 10),
+                
                 Row(
                   children: [
                     Expanded(
@@ -223,6 +344,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         value: 'kilyan',
                         groupValue: _selectedRole,
                         activeColor: const Color(0xFFFF6B35),
+                        contentPadding: EdgeInsets.zero,
                         onChanged: (value) {
                           setState(() {
                             _selectedRole = value!;
@@ -236,6 +358,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         value: 'livre',
                         groupValue: _selectedRole,
                         activeColor: const Color(0xFFFF6B35),
+                        contentPadding: EdgeInsets.zero,
                         onChanged: (value) {
                           setState(() {
                             _selectedRole = value!;
@@ -245,12 +368,89 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ],
                 ),
+                
+                // Option Admin (cachée, accessible seulement si email contient 'admin')
+                if (_emailController.text.contains('admin'))
+                  Row(
+                    children: [
+                      Expanded(
+                        child: RadioListTile<String>(
+                          title: const Text('Admin'),
+                          value: 'admin',
+                          groupValue: _selectedRole,
+                          activeColor: const Color(0xFFFF6B35),
+                          contentPadding: EdgeInsets.zero,
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedRole = value!;
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                
+                const SizedBox(height: 20),
+                
+                // Conditions d'utilisation
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _acceptTerms,
+                      activeColor: const Color(0xFFFF6B35),
+                      onChanged: (value) {
+                        setState(() {
+                          _acceptTerms = value ?? false;
+                        });
+                      },
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          // Afficher les conditions
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Conditions d\'utilisation'),
+                              content: const Text(
+                                'En créant un compte, vous acceptez nos conditions d\'utilisation et notre politique de confidentialité. Vos données sont stockées localement sur votre appareil.'
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text('FERMER'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          'J\'accepte les conditions d\'utilisation',
+                          style: TextStyle(
+                            color: Color(0xFFFF6B35),
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                
                 const SizedBox(height: 30),
+                
+                // Bouton inscription
                 SizedBox(
                   width: double.infinity,
                   height: 55,
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _register,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF6B35),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
                     child: _isLoading
                         ? const SizedBox(
                             height: 20,
@@ -269,7 +469,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                   ),
                 ),
+                
                 const SizedBox(height: 20),
+                
+                // Lien vers connexion
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -279,11 +482,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     GestureDetector(
                       onTap: () {
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(
-                            builder: (context) => const LoginScreen(),
-                          ),
-                        );
+                        Navigator.of(context).pop();
                       },
                       child: const Text(
                         'Se connecter',

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'register_screen.dart';
@@ -7,7 +8,6 @@ import 'driver_dashboard.dart';
 import '../models/user.dart';
 import '../services/storage_service.dart';
 import '../services/api_service.dart';
-import 'dart:convert';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -21,40 +21,20 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   
-  final _storageService = StorageService();
-  final _apiService = ApiService();
-  final _secureStorage = const FlutterSecureStorage();
+  late final StorageService _storageService;
+  late final ApiService _apiService;
+  late final FlutterSecureStorage _secureStorage;
 
   bool _obscurePassword = true;
   bool _rememberMe = false;
   bool _isLoading = false;
 
-  // Base de données locale simulée pour les utilisateurs enregistrés
-  final Map<String, Map<String, String>> _registeredUsers = {
-    // Utilisateurs par défaut pour les tests
-    'test@test.com': {
-      'password': 'password',
-      'name': 'Client Test',
-      'phone': '509 1234 5678',
-      'role': 'kilyan',
-    },
-    'admin@test.com': {
-      'password': 'password',
-      'name': 'Admin',
-      'phone': '509 8765 4321',
-      'role': 'admin',
-    },
-    'livreur@test.com': {
-      'password': 'password',
-      'name': 'Livreur Test',
-      'phone': '509 5555 5555',
-      'role': 'livre',
-    },
-  };
-
   @override
   void initState() {
     super.initState();
+    _storageService = StorageService();
+    _apiService = ApiService();
+    _secureStorage = const FlutterSecureStorage();
     _checkSavedCredentials();
   }
 
@@ -67,44 +47,59 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Vérifier s'il y a des identifiants sauvegardés
   Future<void> _checkSavedCredentials() async {
-    final savedEmail = await _secureStorage.read(key: 'saved_email');
-    final savedPassword = await _secureStorage.read(key: 'saved_password');
-    
-    if (savedEmail != null && savedPassword != null) {
-      setState(() {
-        _emailController.text = savedEmail;
-        _passwordController.text = savedPassword;
-        _rememberMe = true;
-      });
+    try {
+      final savedEmail = await _secureStorage.read(key: 'saved_email');
+      final savedPassword = await _secureStorage.read(key: 'saved_password');
+      
+      if (savedEmail != null && savedPassword != null) {
+        setState(() {
+          _emailController.text = savedEmail;
+          _passwordController.text = savedPassword;
+          _rememberMe = true;
+        });
+      }
+    } catch (e) {
+      print('Erreur chargement credentials: $e');
     }
   }
 
   // Charger les utilisateurs depuis le storage
   Future<Map<String, Map<String, String>>> _loadRegisteredUsers() async {
-    final saved = await _secureStorage.read(key: 'registered_users');
-    if (saved != null) {
-      return Map<String, Map<String, String>>.from(
-        (jsonDecode(saved) as Map).map(
-          (key, value) => MapEntry(key, Map<String, String>.from(value))
-        )
-      );
+    try {
+      final saved = await _secureStorage.read(key: 'registered_users');
+      if (saved != null) {
+        final Map<String, dynamic> decoded = jsonDecode(saved);
+        final Map<String, Map<String, String>> result = {};
+        decoded.forEach((key, value) {
+          result[key] = Map<String, String>.from(value);
+        });
+        return result;
+      }
+    } catch (e) {
+      print('Erreur chargement users: $e');
     }
-    return _registeredUsers;
-  }
-
-  // Sauvegarder un nouvel utilisateur
-  Future<void> _saveRegisteredUser(String email, String password, String name, String phone, String role) async {
-    final users = await _loadRegisteredUsers();
-    users[email] = {
-      'password': password,
-      'name': name,
-      'phone': phone,
-      'role': role,
+    
+    // Utilisateurs par défaut
+    return {
+      'test@test.com': {
+        'password': 'password',
+        'name': 'Client Test',
+        'phone': '509 1234 5678',
+        'role': 'kilyan',
+      },
+      'admin@test.com': {
+        'password': 'password',
+        'name': 'Admin',
+        'phone': '509 8765 4321',
+        'role': 'admin',
+      },
+      'livreur@test.com': {
+        'password': 'password',
+        'name': 'Livreur Test',
+        'phone': '509 5555 5555',
+        'role': 'livre',
+      },
     };
-    await _secureStorage.write(
-      key: 'registered_users',
-      value: jsonEncode(users),
-    );
   }
 
   Future<void> _login() async {
@@ -115,72 +110,76 @@ class _LoginScreenState extends State<LoginScreen> {
     // Simulation délai réseau
     await Future.delayed(const Duration(seconds: 1));
 
-    // Charger les utilisateurs enregistrés
-    final users = await _loadRegisteredUsers();
-    
-    // Vérifier si l'email existe
-    if (users.containsKey(_emailController.text)) {
-      final userData = users[_emailController.text]!;
+    try {
+      // Charger les utilisateurs enregistrés
+      final users = await _loadRegisteredUsers();
       
-      // Vérifier le mot de passe
-      if (userData['password'] == _passwordController.text) {
+      // Vérifier si l'email existe
+      if (users.containsKey(_emailController.text)) {
+        final userData = users[_emailController.text]!;
         
-        // Créer l'objet utilisateur
-        final user = User(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          name: userData['name']!,
-          email: _emailController.text,
-          phone: userData['phone']!,
-          role: userData['role']!,
-          token: 'fake_token_${DateTime.now().millisecondsSinceEpoch}',
-          isLoggedIn: true,
-        );
-        
-        // Sauvegarder l'utilisateur connecté
-        await _storageService.saveUser(user);
-        
-        // Sauvegarder les identifiants si "Se souvenir de moi" est coché
-        if (_rememberMe) {
-          await _secureStorage.write(key: 'saved_email', value: _emailController.text);
-          await _secureStorage.write(key: 'saved_password', value: _passwordController.text);
-        } else {
-          await _secureStorage.delete(key: 'saved_email');
-          await _secureStorage.delete(key: 'saved_password');
-        }
-
-        if (mounted) {
-          // Rediriger selon le rôle
-          Widget destination;
-          switch (user.role) {
-            case 'admin':
-              destination = const AdminDashboard();
-              break;
-            case 'livre':
-              destination = const DriverDashboard();
-              break;
-            default:
-              destination = const HomeScreen();
+        // Vérifier le mot de passe
+        if (userData['password'] == _passwordController.text) {
+          
+          // Créer l'objet utilisateur
+          final user = User(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            name: userData['name']!,
+            email: _emailController.text,
+            phone: userData['phone']!,
+            role: userData['role']!,
+            token: 'fake_token_${DateTime.now().millisecondsSinceEpoch}',
+            isLoggedIn: true,
+          );
+          
+          // Sauvegarder l'utilisateur connecté
+          await _storageService.saveUser(user);
+          
+          // Sauvegarder les identifiants si "Se souvenir de moi" est coché
+          if (_rememberMe) {
+            await _secureStorage.write(key: 'saved_email', value: _emailController.text);
+            await _secureStorage.write(key: 'saved_password', value: _passwordController.text);
+          } else {
+            await _secureStorage.delete(key: 'saved_email');
+            await _secureStorage.delete(key: 'saved_password');
           }
-          
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => destination),
-          );
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Bienvenue ${user.name}!'),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 2),
-            ),
-          );
+
+          if (mounted) {
+            // Rediriger selon le rôle
+            Widget destination;
+            switch (user.role) {
+              case 'admin':
+                destination = const AdminDashboard();
+                break;
+              case 'livre':
+                destination = const DriverDashboard();
+                break;
+              default:
+                destination = const HomeScreen();
+            }
+            
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => destination),
+            );
+            
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Bienvenue ${user.name}!'),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        } else {
+          // Mot de passe incorrect
+          _showErrorSnackBar('Mot de passe incorrect');
         }
       } else {
-        // Mot de passe incorrect
-        _showErrorSnackBar('Mot de passe incorrect');
+        // Email non trouvé
+        _showErrorSnackBar('Aucun compte trouvé avec cet email');
       }
-    } else {
-      // Email non trouvé
-      _showErrorSnackBar('Aucun compte trouvé avec cet email');
+    } catch (e) {
+      _showErrorSnackBar('Erreur: $e');
     }
 
     setState(() => _isLoading = false);
@@ -210,10 +209,18 @@ class _LoginScreenState extends State<LoginScreen> {
               
               // Logo
               Center(
-                child: Image.asset(
-                  'assets/images/logo.png',
+                child: Container(
                   width: 100,
                   height: 100,
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.delivery_dining,
+                    size: 60,
+                    color: Color(0xFFFF6B35),
+                  ),
                 ),
               ),
               
@@ -406,13 +413,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         });
                         
                         // Afficher un message de succès
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Compte créé avec succès! Connectez-vous ${result['email']}'),
-                            backgroundColor: Colors.green,
-                            duration: const Duration(seconds: 4),
-                          ),
-                        );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Compte créé avec succès! Connectez-vous ${result['email']}'),
+                              backgroundColor: Colors.green,
+                              duration: const Duration(seconds: 4),
+                            ),
+                          );
+                        }
                       }
                     },
                     child: const Text(

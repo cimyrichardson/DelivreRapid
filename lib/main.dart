@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
 import 'screens/splash_screen.dart';
+import 'services/storage_service.dart';
 
-void main() {
+void main() async {
+  // Assurer que WidgetsBinding est initialisé
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialiser StorageService
+  final storageService = StorageService();
+  await storageService.init();
+  
   runApp(const DeliveRapidApp());
 }
 
@@ -16,7 +24,6 @@ class DeliveRapidApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.orange,
         scaffoldBackgroundColor: Colors.white,
-        fontFamily: 'Poppins',
         appBarTheme: const AppBarTheme(
           backgroundColor: Color(0xFFFF6B35),
           foregroundColor: Colors.white,
@@ -26,7 +33,6 @@ class DeliveRapidApp extends StatelessWidget {
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Colors.white,
-            fontFamily: 'Poppins',
           ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
