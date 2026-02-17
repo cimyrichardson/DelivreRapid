@@ -23,7 +23,7 @@ class _admState extends State<adm> {
           Padding(
             padding: const EdgeInsets.only(right: 16),
 
-            child: Image.asset('../assets/images/avatar.png',
+            child: Image.asset('../assets/images/ava_adm.png',
               width:50,
               height: 50,
               fit: BoxFit.contain,
@@ -198,7 +198,8 @@ class _admState extends State<adm> {
                                   ),
                                   const SizedBox(width: 8),
                                   ElevatedButton(
-                                    onPressed: peye ? () => print("Validé") : null,
+                                    onPressed: peye ? () {print("Validé");
+                                    NotificationManager.addNotification("Nouvo livrezon pou Jean Dupont ✅");} : null,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.green,
                                       foregroundColor: Colors.white,
