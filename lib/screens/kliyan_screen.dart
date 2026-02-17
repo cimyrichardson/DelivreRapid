@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
-import '../models/notif.dart';
+import '../models/delivery.dart';
+import '../models/user.dart';
+import '../services/api_service.dart';
+import '../services/storage_service.dart';
+import 'log_screen.dart';
+import 'delivery_detail.dart';
 
 class kliyan extends StatefulWidget {
   const kliyan({super.key});
@@ -8,11 +13,167 @@ class kliyan extends StatefulWidget {
   State<kliyan> createState() => _kliyanState();
 }
 
-void touch(){
-  print("ou touchem");
-}
-
 class _kliyanState extends State<kliyan> {
+  final ApiService apiService = ApiService();
+  
+  User? currentUser;
+  List<Delivery> deliveries = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final user = await StorageService.getCurrentUser();
+      setState(() => currentUser = user);
+
+      final deliveriesData = await apiService.fetchAllDeliveries();
+      await StorageService.saveDeliveries(deliveriesData);
+      
+      setState(() {
+        deliveries = deliveriesData;
+        isLoading = false;
+      });
+    } catch (e) {
+      print('Erreur loadData: $e');
+      setState(() => isLoading = false);
+    }
+  }
+
+  void _logout() async {
+    await StorageService.logout();
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const log()),
+      );
+    }
+  }
+
+  void _showCreateDeliveryDialog() {
+    final nomController = TextEditingController();
+    final adressePickupController = TextEditingController();
+    final adresseDeliveryController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final poidController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Créer une Livraison'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nomController,
+                decoration: const InputDecoration(
+                  labelText: 'Nom du destinataire',
+                  prefixIcon: Icon(Icons.person),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: adressePickupController,
+                decoration: const InputDecoration(
+                  labelText: 'Adresse de prise en charge',
+                  prefixIcon: Icon(Icons.location_on),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: adresseDeliveryController,
+                decoration: const InputDecoration(
+                  labelText: 'Adresse de livraison',
+                  prefixIcon: Icon(Icons.location_on),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description du colis',
+                  prefixIcon: Icon(Icons.description),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: poidController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Poids (kg)',
+                  prefixIcon: Icon(Icons.scale),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (nomController.text.isEmpty ||
+                  adressePickupController.text.isEmpty ||
+                  adresseDeliveryController.text.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Remplissez tous les champs'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+
+              final newDelivery = Delivery(
+                id: DateTime.now().millisecondsSinceEpoch.toString(),
+                trackingNumber:
+                    'TRK${DateTime.now().millisecondsSinceEpoch}',
+                customerName: nomController.text,
+                customerPhone: currentUser?.phone ?? 'Non spécifié',
+                customerEmail: currentUser?.email,
+                pickupAddress: adressePickupController.text,
+                deliveryAddress: adresseDeliveryController.text,
+                packageWeight:
+                    double.tryParse(poidController.text) ?? 1.0,
+                packageDescription: descriptionController.text,
+                status: 'an_trete',
+                estimatedTime: DateTime.now().add(
+                  const Duration(hours: 2),
+                ),
+                createdAt: DateTime.now(),
+                createdBy: currentUser?.name,
+              );
+
+              await StorageService.addDelivery(newDelivery);
+              
+              setState(() {
+                deliveries.add(newDelivery);
+              });
+
+              if (mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Livraison créée avec succès!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            child: const Text('Créer'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -475,8 +636,3 @@ class _ajouState extends State<ajou> {
     );
   }
 }
-
-
-
-
-

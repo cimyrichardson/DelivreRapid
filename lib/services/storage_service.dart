@@ -1,77 +1,116 @@
-import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:convert';
+import '../models/user.dart';
 import '../models/delivery.dart';
 
 class StorageService {
-  static final StorageService _instance = StorageService._internal();
-  factory StorageService() => _instance;
-  StorageService._internal();
+  static const String _currentUserKey = 'currentUser';
+  static const String _deliveriesKey = 'deliveries';
+  static const String _tokenKey = 'token';
 
-  late SharedPreferences _prefs;
-  final _secureStorage = const FlutterSecureStorage();
-
-  // Initialisation au démarrage (Appelée dans main.dart)
-  Future<void> init() async {
-    _prefs = await SharedPreferences.getInstance();
-  }
-
-  // --- GESTION UTILISATEUR (Sécurisé) ---
-  Future<void> saveToken(String token) async {
-    await _secureStorage.write(key: 'auth_token', value: token);
-  }
-
-  Future<String?> getToken() async {
-    return await _secureStorage.read(key: 'auth_token');
-  }
-
-  // --- GESTION DES LIVRAISONS (CRUD Local) ---
+  // --- Utilisateur Connecté ---
   
-  // Sauvegarder toute la liste
-  Future<void> saveDeliveries(List<Delivery> deliveries) async {
-    List<String> listJson = deliveries.map((d) => jsonEncode(d.toMap())).toList();
-    await _prefs.setStringList('deliveries', listJson);
+  // Sauvegarder l'utilisateur connecté
+  static Future<void> saveCurrentUser(User user) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_currentUserKey, json.encode(user.toJson()));
   }
 
-  // Récupérer la liste
-  List<Delivery> getDeliveries() {
-    List<String>? listJson = _prefs.getStringList('deliveries');
-    if (listJson == null) return [];
-    return listJson.map((item) => Delivery.fromMap(jsonDecode(item))).toList();
-  }
-
-  // Ajouter une livraison (Create)
-  Future<void> addDelivery(Delivery delivery) async {
-    List<Delivery> current = getDeliveries();
-    current.add(delivery);
-    await saveDeliveries(current);
-  }
-
-  // Mettre à jour un statut (Update)
-  Future<void> updateDeliveryStatus(String id, String newStatus) async {
-    List<Delivery> current = getDeliveries();
-    int index = current.indexWhere((d) => d.id == id);
-    if (index != -1) {
-      // On recrée l'objet avec le nouveau statut
-      current[index] = Delivery(
-        id: current[index].id,
-        title: current[index].title,
-        status: newStatus,
-      );
-      await saveDeliveries(current);
+  // Récupérer l'utilisateur connecté
+  static Future<User?> getCurrentUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userJson = prefs.getString(_currentUserKey);
+    
+    if (userJson == null) return null;
+    
+    try {
+      return User.fromJson(json.decode(userJson));
+    } catch (e) {
+      print('Erreur getCurrent User: $e');
+      return null;
     }
   }
 
-  // --- GESTION SYNC (Offline mode) ---
-  Future<void> addToPendingSync(Delivery delivery) async {
-    List<String> pending = _prefs.getStringList('pendingSync') ?? [];
-    pending.add(jsonEncode(delivery.toMap()));
-    await _prefs.setStringList('pendingSync', pending);
+  // Vérifier si un utilisateur est connecté
+  static Future<bool> isUserLoggedIn() async {
+    final user = await getCurrentUser();
+    return user != null;
   }
 
-  // Nettoyer après déconnexion
-  Future<void> clearAll() async {
-    await _prefs.clear();
-    await _secureStorage.deleteAll();
+  // Déconnecter (supprimer l'utilisateur)
+  static Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_currentUserKey);
+    await prefs.remove(_tokenKey);
+  }
+
+  // --- Token ---
+
+  // Sauvegarder le token
+  static Future<void> saveToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_tokenKey, token);
+  }
+
+  // Récupérer le token
+  static Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_tokenKey);
+  }
+
+  // --- Livraisons ---
+
+  // Sauvegarder les livraisons
+  static Future<void> saveDeliveries(List<Delivery> deliveries) async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = deliveries.map((d) => d.toJson()).toList();
+    await prefs.setString(_deliveriesKey, jsonEncode(json));
+  }
+
+  // Récupérer les livraisons
+  static Future<List<Delivery>> getDeliveries() async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = prefs.getString(_deliveriesKey);
+    
+    if (json == null) return [];
+    
+    try {
+      final list = jsonDecode(json) as List;
+      return list.map((item) => Delivery.fromJson(item)).toList();
+    } catch (e) {
+      print('Erreur getDeliveries: $e');
+      return [];
+    }
+  }
+
+  // Ajouter une livraison
+  static Future<void> addDelivery(Delivery delivery) async {
+    final deliveries = await getDeliveries();
+    deliveries.add(delivery);
+    await saveDeliveries(deliveries);
+  }
+
+  // Mettre à jour une livraison
+  static Future<void> updateDelivery(Delivery delivery) async {
+    final deliveries = await getDeliveries();
+    final index = deliveries.indexWhere((d) => d.id == delivery.id);
+    
+    if (index != -1) {
+      deliveries[index] = delivery;
+      await saveDeliveries(deliveries);
+    }
+  }
+
+  // Supprimer une livraison
+  static Future<void> deleteDelivery(String id) async {
+    final deliveries = await getDeliveries();
+    deliveries.removeWhere((d) => d.id == id);
+    await saveDeliveries(deliveries);
+  }
+
+  // Effacer tout (logout complet)
+  static Future<void> clearAll() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
   }
 }

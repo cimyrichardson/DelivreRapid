@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-
+import 'log_screen.dart';
+import 'kliyan_screen.dart';
+import '../services/storage_service.dart';
+import '../models/user.dart';
 
 class sign extends StatefulWidget {
   const sign({super.key});
@@ -7,151 +10,329 @@ class sign extends StatefulWidget {
   @override
   State<sign> createState() => _signState();
 }
-//-----------------------tout sa se pou test-----------------------
+
 class _signState extends State<sign> {
-
-
-  // 2. Les contrôleurs pour récupérer le texte saisi par l'utilisateur
+  // Contrôleurs pour récupérer le texte saisi par l'utilisateur
+  final TextEditingController nom = TextEditingController();
   final TextEditingController imel = TextEditingController();
   final TextEditingController pasword = TextEditingController();
   final TextEditingController konf = TextEditingController();
-  final TextEditingController nom = TextEditingController();
+  final TextEditingController phone = TextEditingController();
+  
+  bool isLoading = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirm = true;
+
+  // Validation d'email
   bool isValidEmail(String email) {
-    return RegExp(r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
-        .hasMatch(email);
+    return RegExp(
+      r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+",
+    ).hasMatch(email);
   }
 
-  // 3. Fonction pour gérer la logique de connexion
-  void _login() {
-    String bon_imel = imel.text.trim(); // .trim() enlève les espaces inutiles
-    String bon_pasword = pasword.text;
-    String konf_pas = konf.text;
-
-
-    if(konf_pas!= bon_pasword || !isValidEmail(bon_imel) ) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('imel oubyen modpas ou mete an pa bon'),
-            backgroundColor: Colors.red),
-      );
-
-    }
-    else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Kont ou an kreye'),
-            backgroundColor: Colors.green),
-      );
-
-    }
-
-
-    // if () {
-    // Si trouvé, on affiche un message de succès (ou on change de page)
-    // ScaffoldMessenger.of(context).showSnackBar(
-    //   const SnackBar(content: Text('Connexion réussie !'), backgroundColor: Colors.green),
-    //);
-    //}
-    //else {
-    // Sinon, on affiche une erreur
-    //ScaffoldMessenger.of(context).showSnackBar(
-    //const SnackBar(content: Text('Email ou mot de passe incorrect'), backgroundColor: Colors.red),
-    //);
-
+  void _showErrorMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
-// --------------------------rive jiskela-------------------------
+
+  void _showSuccessMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  // Créer un compte
+  Future<void> _register() async {
+    String nomVal = nom.text.trim();
+    String emailVal = imel.text.trim();
+    String passwordVal = pasword.text;
+    String confirmVal = konf.text;
+    String phoneVal = phone.text.trim();
+
+    // Validations
+    if (nomVal.isEmpty || emailVal.isEmpty || passwordVal.isEmpty ||
+        phoneVal.isEmpty) {
+      _showErrorMessage('Veuillez remplir tous les champs');
+      return;
+    }
+
+    if (!isValidEmail(emailVal)) {
+      _showErrorMessage('Email invalide');
+      return;
+    }
+
+    if (passwordVal.length < 6) {
+      _showErrorMessage('Le mot de passe doit avoir au moins 6 caractères');
+      return;
+    }
+
+    if (passwordVal != confirmVal) {
+      _showErrorMessage('Les mots de passe ne correspondent pas');
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      // Créer un nouvel utilisateur
+      final newUser = User(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: nomVal,
+        email: emailVal,
+        phone: phoneVal,
+        role: 'kilyan', // Par défaut, nouvel utilisateur = client
+        isLoggedIn: true,
+        isActive: true,
+      );
+
+      // Sauvegarder l'utilisateur
+      await StorageService.saveCurrentUser(newUser);
+
+      _showSuccessMessage('Compte créé avec succès!');
+
+      // Naviguer vers kliyan_screen (client par défaut)
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const kliyan()),
+        );
+      }
+    } catch (e) {
+      _showErrorMessage('Erreur: ${e.toString()}');
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    nom.dispose();
+    imel.dispose();
+    pasword.dispose();
+    konf.dispose();
+    phone.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // SingleChildScrollView est ESSENTIEL pour que l'écran défile quand le clavier sort
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(25.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const SizedBox(height: 80), // Espace en haut
+            const SizedBox(height: 60),
 
-            // --- SECTION LOGO ---
-            // On centre l'image horizontalement
+            // Logo
             Center(
               child: Image.asset(
                 'assets/images/logo.png',
-                width: 300, // Taille de ton logo
+                width: 200,
               ),
             ),
 
-            const SizedBox(height: 50),
+            const SizedBox(height: 40),
 
-            TextField(
-              controller: nom, // nou rekipere nom moun lan
-              // C'est ici que le clavier s'adapte pour l'email (touche @ visible)
-              keyboardType: TextInputType.text,
-              decoration: const InputDecoration(
-                labelText: 'Non',
-                prefixIcon: Icon(Icons.email_outlined),
-                border: OutlineInputBorder(), // Bordure autour du champ
-
-
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // --- CHAMP EMAIL ---
-            TextField(
-              controller: imel, // nou rekipere email la
-              // C'est ici que le clavier s'adapte pour l'email (touche @ visible)
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                labelText: 'Imel',
-                prefixIcon: Icon(Icons.email_outlined),
-                border: OutlineInputBorder(), // Bordure autour du champ
-
-
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // --- CHAMP MOT DE PASSE ---
-            TextField(
-              controller: pasword,
-              obscureText: true,
-              keyboardType: TextInputType.text,
-              decoration: const InputDecoration(
-                labelText: 'Modpas ',
-                prefixIcon: Icon(Icons.lock_outline),
-                border: OutlineInputBorder(),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            TextField(
-              controller: konf,
-              obscureText: true,
-              keyboardType: TextInputType.text,
-              decoration: const InputDecoration(
-                labelText: 'konfime Modpas ',
-                prefixIcon: Icon(Icons.check),
-                border: OutlineInputBorder(),
+            const Text(
+              'Créer un Compte',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
               ),
             ),
 
             const SizedBox(height: 30),
 
-            // --- BOUTON DE CONNEXION ---
-            SizedBox(
-              width: double.infinity, // Le bouton prend toute la largeur
-              height: 55,
-              child: ElevatedButton(
-                onPressed: _login, // Appelle la fonction de vérification
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blueAccent,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            // Champ Nom
+            TextField(
+              controller: nom,
+              enabled: !isLoading,
+              keyboardType: TextInputType.text,
+              decoration: InputDecoration(
+                labelText: 'Nom complet',
+                hintText: 'Jean Dupont',
+                prefixIcon: const Icon(Icons.person_outline),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Text(
-                  'Kreye kont',
-                  style: TextStyle(fontSize: 16, color: Colors.white),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Colors.orange, width: 2),
                 ),
               ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Champ Téléphone
+            TextField(
+              controller: phone,
+              enabled: !isLoading,
+              keyboardType: TextInputType.phone,
+              decoration: InputDecoration(
+                labelText: 'Téléphone',
+                hintText: '+509 1234 5678',
+                prefixIcon: const Icon(Icons.phone_outlined),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Colors.orange, width: 2),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Champ Email
+            TextField(
+              controller: imel,
+              enabled: !isLoading,
+              keyboardType: TextInputType.emailAddress,
+              decoration: InputDecoration(
+                labelText: 'Email',
+                hintText: 'jean@example.com',
+                prefixIcon: const Icon(Icons.email_outlined),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Colors.orange, width: 2),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Champ Mot de passe
+            TextField(
+              controller: pasword,
+              enabled: !isLoading,
+              obscureText: _obscurePassword,
+              keyboardType: TextInputType.text,
+              decoration: InputDecoration(
+                labelText: 'Mot de passe',
+                hintText: '••••••••',
+                prefixIcon: const Icon(Icons.lock_outline),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                  ),
+                  onPressed: () {
+                    setState(() => _obscurePassword = !_obscurePassword);
+                  },
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Colors.orange, width: 2),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Champ Confirmation Mot de passe
+            TextField(
+              controller: konf,
+              enabled: !isLoading,
+              obscureText: _obscureConfirm,
+              keyboardType: TextInputType.text,
+              decoration: InputDecoration(
+                labelText: 'Confirmer le mot de passe',
+                hintText: '••••••••',
+                prefixIcon: const Icon(Icons.check_outlined),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureConfirm ? Icons.visibility_off : Icons.visibility,
+                  ),
+                  onPressed: () {
+                    setState(() => _obscureConfirm = !_obscureConfirm);
+                  },
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Colors.orange, width: 2),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 30),
+
+            // Bouton Créer un compte
+            SizedBox(
+              width: double.infinity,
+              height: 55,
+              child: ElevatedButton(
+                onPressed: isLoading ? null : _register,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text(
+                        'Créer un Compte',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Lien vers la connexion
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('Vous avez déjà un compte? '),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => const log()),
+                    );
+                  },
+                  child: const Text(
+                    'Se Connecter',
+                    style: TextStyle(
+                      color: Colors.orange,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
