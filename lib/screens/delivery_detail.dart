@@ -79,12 +79,12 @@ class _DeliveryDetailState extends State<DeliveryDetail> {
                 _buildInfoRow('Statut', delivery.statusText),
                 _buildInfoRow(
                   'Créée le',
-                  '${delivery.createdAt.toLocal().toString().split('.')[0]}',
+                  delivery.createdAt.toLocal().toString().split('.')[0],
                 ),
                 if (delivery.actualDeliveryTime != null)
                   _buildInfoRow(
                     'Livrée le',
-                    '${delivery.actualDeliveryTime!.toLocal().toString().split('.')[0]}',
+                    delivery.actualDeliveryTime!.toLocal().toString().split('.')[0],
                   ),
                 if (delivery.assignedDriverName != null) ...[
                   _buildInfoRow('Livreur', delivery.assignedDriverName!),
