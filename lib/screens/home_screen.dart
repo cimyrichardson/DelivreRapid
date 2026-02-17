@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../models/delivery.dart';
-import '../services/api_service.dart';
 import '../services/storage_service.dart';
-import '../models/user.dart';
+import '../services/api_service.dart';
 import 'delivery_detail.dart';
-import 'log_screen.dart';
+import 'create_delivery.dart';
+import 'profile_screen.dart';
+import 'admin_dashboard.dart';
+import 'driver_dashboard.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,311 +16,370 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final ApiService apiService = ApiService();
+  final _storageService = StorageService();
+  final _apiService = ApiService();
   
-  User? currentUser;
-  List<Delivery> deliveries = [];
-  bool isLoading = true;
+  List<Delivery> _deliveries = [];
+  bool _isLoading = true;
+  String _userRole = 'kilyan'; // kilyan, livre, admin
+  Map<String, dynamic> _user = {};
 
   @override
   void initState() {
     super.initState();
+    _loadUserData();
     _loadData();
   }
 
-  Future<void> _loadData() async {
-    try {
-      // Récupérer l'utilisateur connecté
-      final user = await StorageService.getCurrentUser();
-      setState(() => currentUser = user);
-
-      // Récupérer les livraisons depuis l'API
-      final deliveriesData = await apiService.fetchAllDeliveries();
-      
-      // Sauvegarder les livraisons
-      await StorageService.saveDeliveries(deliveriesData);
-      
+  Future<void> _loadUserData() async {
+    final user = await _storageService.getUser();
+    if (user != null) {
       setState(() {
-        deliveries = deliveriesData;
-        isLoading = false;
+        _user = user.toJson();
+        _userRole = user.role;
       });
-    } catch (e) {
-      print('Erreur loadData: $e');
-      setState(() => isLoading = false);
     }
   }
 
-  void _logout() async {
-    await StorageService.logout();
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const log()),
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    
+    // Charger depuis storage d'abord
+    _deliveries = await _storageService.getDeliveries();
+    
+    // Puis charger depuis API
+    try {
+      final apiDeliveries = await _apiService.fetchAllDeliveries();
+      if (apiDeliveries.isNotEmpty) {
+        setState(() {
+          _deliveries = apiDeliveries;
+        });
+        await _storageService.saveDeliveries(apiDeliveries);
+      }
+    } catch (e) {
+      print('Erreur chargement API: $e');
+    }
+    
+    setState(() => _isLoading = false);
+  }
+
+  // Rediriger vers le bon dashboard selon le rôle
+  void _navigateToRoleBasedDashboard() {
+    Widget destination;
+    
+    switch (_userRole) {
+      case 'admin':
+        destination = const AdminDashboard();
+        break;
+      case 'livre':
+        destination = const DriverDashboard();
+        break;
+      default:
+        destination = const HomeScreen(); // Déjà sur l'écran client
+    }
+    
+    if (destination != const HomeScreen()) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => destination),
       );
+    }
+  }
+
+  int _getStats() {
+    switch (_userRole) {
+      case 'livre':
+        return _deliveries.where((d) => 
+          d.assignedTo == _user['id'] && d.status == 'an_wout'
+        ).length;
+      case 'admin':
+        return _deliveries.length;
+      default: // client
+        return _deliveries.where((d) => d.status == 'an_trete').length;
+    }
+  }
+
+  String _getStatsLabel() {
+    switch (_userRole) {
+      case 'livre':
+        return 'Mes livraisons en cours';
+      case 'admin':
+        return 'Total livraisons';
+      default:
+        return 'En attente';
+    }
+  }
+
+  List<Delivery> _getFilteredDeliveries() {
+    switch (_userRole) {
+      case 'livre':
+        return _deliveries.where((d) => d.assignedTo == _user['id']).toList();
+      case 'admin':
+        return _deliveries;
+      default: // client - montre ses propres livraisons
+        // Pour la démo, on montre quelques livraisons
+        return _deliveries.take(5).toList();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('DelivreRapid'),
-        elevation: 0,
-        actions: [
-          if (currentUser != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      currentUser!.name,
-                      style: const TextStyle(fontSize: 12, color: Colors.white),
-                    ),
-                    Text(
-                      currentUser!.role,
-                      style: const TextStyle(fontSize: 10, color: Colors.white70),
-                    ),
-                  ],
+    return WillPopScope(
+      onWillPop: () async {
+        // Bloquer le retour en arrière après connexion
+        return false;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('DeliveRapid'),
+          backgroundColor: const Color(0xFFFF6B35),
+          actions: [
+            // Bouton pour basculer vers le dashboard selon le rôle (visible seulement pour admin/livreur)
+            if (_userRole != 'kilyan')
+              IconButton(
+                icon: Icon(
+                  _userRole == 'admin' ? Icons.dashboard : Icons.delivery_dining,
+                  color: Colors.white,
                 ),
+                onPressed: _navigateToRoleBasedDashboard,
+                tooltip: _userRole == 'admin' ? 'Dashboard Admin' : 'Espace Livreur',
               ),
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Colors.white),
+              onPressed: _loadData,
+              tooltip: 'Actualiser',
             ),
-        ],
-      ),
-      drawer: Drawer(
-        child: ListView(
-          children: [
-            DrawerHeader(
-              decoration: const BoxDecoration(color: Colors.orange),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircleAvatar(
-                    radius: 30,
-                    child: Text(currentUser?.initials ?? '?'),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    currentUser?.name ?? 'Utilisateur',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.home),
-              title: const Text('Accueil'),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: const Icon(Icons.person),
-              title: const Text('Profil'),
-              onTap: () => Navigator.pop(context),
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.logout, color: Colors.red),
-              title: const Text('Déconnexion', style: TextStyle(color: Colors.red)),
-              onTap: _logout,
+            IconButton(
+              icon: const Icon(Icons.person_outline, color: Colors.white),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                ).then((_) => _loadUserData());
+              },
+              tooltip: 'Profil',
             ),
           ],
         ),
-      ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadData,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  // Carte de bienvenue
-                  Card(
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Colors.orange, Colors.orangeAccent],
-                        ),
-                        borderRadius: BorderRadius.circular(8),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                onRefresh: _loadData,
+                child: Column(
+                  children: [
+                    // Carte de bienvenue
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFF6B35),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Bienvenue, ${currentUser?.name}!',
+                            'Bonjour, ${_user['name'] ?? 'Utilisateur'}',
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 20,
+                              fontSize: 24,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 4),
                           Text(
-                            'Vous êtes ${currentUser?.role == 'kilyan' ? 'client' : currentUser?.role == 'livre' ? 'livreur' : 'administrateur'}',
-                            style: const TextStyle(color: Colors.white70),
+                            _userRole == 'admin' ? 'Administrateur' :
+                            _userRole == 'livre' ? 'Livreur' : 'Client',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 16,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Statistiques
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          'Total',
-                          deliveries.length.toString(),
-                          Colors.blue,
+                    
+                    // Stats Card
+                    Container(
+                      margin: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFF6B35), Color(0xFFFF8C5A)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
+                        borderRadius: BorderRadius.circular(15),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildStatCard(
-                          'En route',
-                          deliveries
-                              .where((d) => d.isInTransit)
-                              .length
-                              .toString(),
-                          Colors.orange,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildStatCard(
-                          'Livrée',
-                          deliveries
-                              .where((d) => d.isDelivered)
-                              .length
-                              .toString(),
-                          Colors.green,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Liste des livraisons
-                  const Text(
-                    'Livraisons Récentes',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  if (deliveries.isEmpty)
-                    const Center(
-                      child: Text('Aucune livraison trouvée'),
-                    )
-                  else
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: deliveries.length,
-                      itemBuilder: (context, index) {
-                        final delivery = deliveries[index];
-                        return DeliveryCard(
-                          delivery: delivery,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    DeliveryDetail(delivery: delivery),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _getStats().toString(),
+                                style: const TextStyle(
+                                  fontSize: 36,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
                               ),
-                            );
-                          },
-                        );
-                      },
+                              Text(
+                                _getStatsLabel(),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (_userRole != 'livre')
+                            ElevatedButton(
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => const CreateDeliveryScreen(),
+                                  ),
+                                ).then((_) => _loadData());
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: const Color(0xFFFF6B35),
+                              ),
+                              child: const Text('Nouvelle livraison'),
+                            ),
+                        ],
+                      ),
                     ),
-                ],
+                    
+                    // Liste des livraisons
+                    Expanded(
+                      child: _getFilteredDeliveries().isEmpty
+                          ? const Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.inventory_2_outlined,
+                                    size: 64,
+                                    color: Colors.grey,
+                                  ),
+                                  SizedBox(height: 16),
+                                  Text(
+                                    'Aucune livraison pour le moment',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.all(8),
+                              itemCount: _getFilteredDeliveries().length,
+                              itemBuilder: (context, index) {
+                                final delivery = _getFilteredDeliveries()[index];
+                                return Card(
+                                  margin: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  elevation: 2,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: ListTile(
+                                    contentPadding: const EdgeInsets.all(12),
+                                    leading: CircleAvatar(
+                                      radius: 25,
+                                      backgroundColor: delivery.statusColor.withOpacity(0.1),
+                                      child: Icon(
+                                        Icons.inventory,
+                                        color: delivery.statusColor,
+                                        size: 25,
+                                      ),
+                                    ),
+                                    title: Text(
+                                      delivery.customerName,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    subtitle: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          delivery.deliveryAddress,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 8,
+                                                vertical: 4,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: delivery.statusColor,
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              child: Text(
+                                                delivery.statusText,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              'ID: ${delivery.trackingNumber}',
+                                              style: const TextStyle(
+                                                fontSize: 10,
+                                                color: Colors.grey,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                    trailing: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade100,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.arrow_forward_ios,
+                                        size: 16,
+                                        color: Color(0xFFFF6B35),
+                                      ),
+                                    ),
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) => DeliveryDetailScreen(
+                                            delivery: delivery,
+                                          ),
+                                        ),
+                                      ).then((_) => _loadData());
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-    );
-  }
-
-  Widget _buildStatCard(String label, String value, Color color) {
-    return Card(
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            Text(
-              label,
-              style: TextStyle(color: color, fontSize: 12),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Composant Carte Livraison
-class DeliveryCard extends StatelessWidget {
-  final Delivery delivery;
-  final VoidCallback onTap;
-
-  const DeliveryCard({
-    required this.delivery,
-    required this.onTap,
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        onTap: onTap,
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: delivery.statusColor.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(Icons.local_shipping, color: delivery.statusColor),
-        ),
-        title: Text(
-          delivery.trackingNumber,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Text(
-          delivery.customerName,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: delivery.statusColor.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            delivery.statusText,
-            style: TextStyle(
-              color: delivery.statusColor,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
       ),
     );
   }

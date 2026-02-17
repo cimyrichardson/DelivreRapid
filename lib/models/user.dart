@@ -1,18 +1,15 @@
 class User {
-  // Attribut Pour User
   final String id;
   final String name;
   final String email;
   final String phone;
-  final String role; // "kilyan", "livre", "admin"
+  final String role;
   final String? token;
   final bool isLoggedIn;
   final String? profileImage;
   final DateTime? lastLogin;
   final bool isActive;
-  final Map<String, dynamic>? additionalInfo;
 
-  // Constructeur pour User
   User({
     required this.id,
     required this.name,
@@ -24,52 +21,8 @@ class User {
     this.profileImage,
     this.lastLogin,
     this.isActive = true,
-    this.additionalInfo,
   });
 
-  // Constructeur pour client par défaut
-  User.client({
-    required this.id,
-    required this.name,
-    required this.email,
-    required this.phone,
-    this.token,
-    this.isLoggedIn = false,
-    this.profileImage,
-    this.lastLogin,
-    this.isActive = true,
-    this.additionalInfo,
-  }) : role = 'kilyan';
-
-  // Constructeur pour livreur par défaut
-  User.driver({
-    required this.id,
-    required this.name,
-    required this.email,
-    required this.phone,
-    this.token,
-    this.isLoggedIn = false,
-    this.profileImage,
-    this.lastLogin,
-    this.isActive = true,
-    this.additionalInfo,
-  }) : role = 'livre';
-
-  // Constructeur pour admin par défaut
-  User.admin({
-    required this.id,
-    required this.name,
-    required this.email,
-    required this.phone,
-    this.token,
-    this.isLoggedIn = false,
-    this.profileImage,
-    this.lastLogin,
-    this.isActive = true,
-    this.additionalInfo,
-  }) : role = 'admin';
-
-  // Factory constructor pour créer un User à partir d'un JSON
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       id: json['id']?.toString() ?? '',
@@ -77,18 +30,16 @@ class User {
       email: json['email'] ?? '',
       phone: json['phone'] ?? '',
       role: json['role'] ?? 'kilyan',
-      token: json['token'] ?? json['accessToken'],
+      token: json['token'],
       isLoggedIn: json['isLoggedIn'] ?? false,
-      profileImage: json['profileImage'] ?? json['image'] ?? json['avatar'],
+      profileImage: json['profileImage'] ?? json['image'],
       lastLogin: json['lastLogin'] != null
           ? DateTime.tryParse(json['lastLogin'])
           : null,
       isActive: json['isActive'] ?? true,
-      additionalInfo: json['additionalInfo'] ?? {},
     );
   }
 
-  // Convertir un User en JSON
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -101,11 +52,9 @@ class User {
       'profileImage': profileImage,
       'lastLogin': lastLogin?.toIso8601String(),
       'isActive': isActive,
-      'additionalInfo': additionalInfo,
     };
   }
 
-  // Creation d'une copie du User avec des modifications optionnelles
   User copyWith({
     String? name,
     String? email,
@@ -116,7 +65,6 @@ class User {
     String? profileImage,
     DateTime? lastLogin,
     bool? isActive,
-    Map<String, dynamic>? additionalInfo,
   }) {
     return User(
       id: id,
@@ -129,25 +77,13 @@ class User {
       profileImage: profileImage ?? this.profileImage,
       lastLogin: lastLogin ?? this.lastLogin,
       isActive: isActive ?? this.isActive,
-      additionalInfo: additionalInfo ?? this.additionalInfo,
     );
   }
 
-  // Methodes pour vérifier le rôle de l'utilisateur
   bool get isClient => role == 'kilyan';
   bool get isDriver => role == 'livre';
   bool get isAdmin => role == 'admin';
 
-  // Nom capitalisé (pour affichage)
-  String get capitalizedName {
-    if (name.isEmpty) return '';
-    return name.split(' ').map((word) {
-      if (word.isEmpty) return '';
-      return word[0].toUpperCase() + word.substring(1).toLowerCase();
-    }).join(' ');
-  }
-
-  // Initiales du nom (pour avatar)
   String get initials {
     if (name.isEmpty) return '?';
     List<String> parts = name.split(' ');
@@ -155,10 +91,5 @@ class User {
       return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     }
     return name[0].toUpperCase();
-  }
-
-  @override
-  String toString() {
-    return 'User(id: $id, name: $name, email: $email, role: $role)';
   }
 }

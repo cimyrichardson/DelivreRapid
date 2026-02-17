@@ -1,116 +1,126 @@
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/user.dart';
 import '../models/delivery.dart';
 
 class StorageService {
-  static const String _currentUserKey = 'currentUser';
-  static const String _deliveriesKey = 'deliveries';
-  static const String _tokenKey = 'token';
+  static final StorageService _instance = StorageService._internal();
+  factory StorageService() => _instance;
+  StorageService._internal();
 
-  // --- Utilisateur Connecté ---
-  
-  // Sauvegarder l'utilisateur connecté
-  static Future<void> saveCurrentUser(User user) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_currentUserKey, json.encode(user.toJson()));
+  late SharedPreferences _prefs;
+  final _secureStorage = const FlutterSecureStorage();
+
+  static const String KEY_USER = 'currentUser';
+  static const String KEY_DELIVERIES = 'deliveries';
+  static const String KEY_DRIVERS = 'drivers';
+  static const String KEY_SETTINGS = 'settings';
+  static const String KEY_LAST_SYNC = 'lastSync';
+
+  Future<void> init() async {
+    _prefs = await SharedPreferences.getInstance();
   }
 
-  // Récupérer l'utilisateur connecté
-  static Future<User?> getCurrentUser() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userJson = prefs.getString(_currentUserKey);
-    
-    if (userJson == null) return null;
-    
-    try {
-      return User.fromJson(json.decode(userJson));
-    } catch (e) {
-      print('Erreur getCurrent User: $e');
-      return null;
+  // USER
+  Future<void> saveUser(User user) async {
+    final json = jsonEncode(user.toJson());
+    await _prefs.setString(KEY_USER, json);
+    if (user.token != null) {
+      await _secureStorage.write(key: 'auth_token', value: user.token);
     }
   }
 
-  // Vérifier si un utilisateur est connecté
-  static Future<bool> isUserLoggedIn() async {
-    final user = await getCurrentUser();
-    return user != null;
+  Future<User?> getUser() async {
+    final json = _prefs.getString(KEY_USER);
+    if (json != null) {
+      return User.fromJson(jsonDecode(json));
+    }
+    return null;
   }
 
-  // Déconnecter (supprimer l'utilisateur)
-  static Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_currentUserKey);
-    await prefs.remove(_tokenKey);
+  Future<void> clearUser() async {
+    await _prefs.remove(KEY_USER);
+    await _secureStorage.delete(key: 'auth_token');
   }
 
-  // --- Token ---
-
-  // Sauvegarder le token
-  static Future<void> saveToken(String token) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_tokenKey, token);
+  // DELIVERIES
+  Future<void> saveDeliveries(List<Delivery> deliveries) async {
+    final jsonList = deliveries.map((d) => d.toJson()).toList();
+    await _prefs.setString(KEY_DELIVERIES, jsonEncode(jsonList));
   }
 
-  // Récupérer le token
-  static Future<String?> getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_tokenKey);
-  }
-
-  // --- Livraisons ---
-
-  // Sauvegarder les livraisons
-  static Future<void> saveDeliveries(List<Delivery> deliveries) async {
-    final prefs = await SharedPreferences.getInstance();
-    final json = deliveries.map((d) => d.toJson()).toList();
-    await prefs.setString(_deliveriesKey, jsonEncode(json));
-  }
-
-  // Récupérer les livraisons
-  static Future<List<Delivery>> getDeliveries() async {
-    final prefs = await SharedPreferences.getInstance();
-    final json = prefs.getString(_deliveriesKey);
-    
-    if (json == null) return [];
-    
-    try {
-      final list = jsonDecode(json) as List;
+  Future<List<Delivery>> getDeliveries() async {
+    final json = _prefs.getString(KEY_DELIVERIES);
+    if (json != null) {
+      final List<dynamic> list = jsonDecode(json);
       return list.map((item) => Delivery.fromJson(item)).toList();
-    } catch (e) {
-      print('Erreur getDeliveries: $e');
-      return [];
     }
+    return [];
   }
 
-  // Ajouter une livraison
-  static Future<void> addDelivery(Delivery delivery) async {
+  Future<void> addDelivery(Delivery delivery) async {
     final deliveries = await getDeliveries();
     deliveries.add(delivery);
     await saveDeliveries(deliveries);
   }
 
-  // Mettre à jour une livraison
-  static Future<void> updateDelivery(Delivery delivery) async {
+  Future<void> updateDelivery(Delivery updatedDelivery) async {
     final deliveries = await getDeliveries();
-    final index = deliveries.indexWhere((d) => d.id == delivery.id);
-    
+    final index = deliveries.indexWhere((d) => d.id == updatedDelivery.id);
     if (index != -1) {
-      deliveries[index] = delivery;
+      deliveries[index] = updatedDelivery;
       await saveDeliveries(deliveries);
     }
   }
 
-  // Supprimer une livraison
-  static Future<void> deleteDelivery(String id) async {
+  Future<void> deleteDelivery(String id) async {
     final deliveries = await getDeliveries();
     deliveries.removeWhere((d) => d.id == id);
     await saveDeliveries(deliveries);
   }
 
-  // Effacer tout (logout complet)
-  static Future<void> clearAll() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
+  // SETTINGS
+  Future<void> saveSettings(Map<String, dynamic> settings) async {
+    await _prefs.setString(KEY_SETTINGS, jsonEncode(settings));
+  }
+
+  Future<Map<String, dynamic>> getSettings() async {
+    final json = _prefs.getString(KEY_SETTINGS);
+    if (json != null) {
+      return jsonDecode(json);
+    }
+    return {
+      'theme': 'clair',
+      'language': 'fr',
+      'notifications': true,
+      'weightUnit': 'kg',
+    };
+  }
+
+  // LAST SYNC
+  Future<void> updateLastSync(String key) async {
+    final syncData = await getLastSync();
+    syncData[key] = DateTime.now().toIso8601String();
+    await _prefs.setString(KEY_LAST_SYNC, jsonEncode(syncData));
+  }
+
+  Future<Map<String, dynamic>> getLastSync() async {
+    final json = _prefs.getString(KEY_LAST_SYNC);
+    if (json != null) {
+      return jsonDecode(json);
+    }
+    return {};
+  }
+
+  // TOKEN SECURE
+  Future<String?> getToken() async {
+    return await _secureStorage.read(key: 'auth_token');
+  }
+
+  // CLEAR ALL
+  Future<void> clearAll() async {
+    await _prefs.clear();
+    await _secureStorage.deleteAll();
   }
 }

@@ -1,48 +1,22 @@
-import 'package:flutter/material.dart';
 import 'dart:async';
-import 'log_screen.dart';
-import 'kliyan_screen.dart';
-import 'adm_screen.dart';
-import '../services/storage_service.dart';
+import 'package:flutter/material.dart';
+import 'login_screen.dart';
 
-class splash extends StatefulWidget {
-  const splash({super.key});
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
 
   @override
-  State<splash> createState() => _splashState();
+  State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _splashState extends State<splash> {
+class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // Après 3 secondes, vérifier si l'utilisateur est connecté
-    Timer(const Duration(seconds: 3), () async {
-      final isLoggedIn = await StorageService.isUserLoggedIn();
-      final user = await StorageService.getCurrentUser();
-
-      if (mounted) {
-        if (isLoggedIn && user != null) {
-          // L'utilisateur est déjà connecté, rediriger selon le rôle
-          Widget destination;
-          if (user.isAdmin) {
-            destination = const adm(); // Admin
-          } else {
-            destination = const kliyan(); // Client (par défaut)
-          }
-
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => destination),
-          );
-        } else {
-          // L'utilisateur n'est pas connecté, aller à la connexion
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const log()),
-          );
-        }
-      }
+    Timer(const Duration(seconds: 3), () {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      );
     });
   }
 
@@ -54,30 +28,50 @@ class _splashState extends State<splash> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Logo
-            Image.asset(
-              'assets/images/logo.png',
-              width: 250,
-            ),
-            const SizedBox(height: 30),
-            
-            // Texte et loader
-            const Text(
-              'DelivreRapid',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.orange,
+            Container(
+              width: 150,
+              height: 150,
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.local_shipping,
+                size: 80,
+                color: Color(0xFFFF6B35),
               ),
             ),
-            const SizedBox(height: 20),
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
-            ),
             const SizedBox(height: 30),
             const Text(
+              'DeliveRapid',
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFFFF6B35),
+                letterSpacing: 1.5,
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 40),
+              child: Text(
+                'Vos colis, notre priorité\nLivraison rapide et sécurisée',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF2C3E50),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            const SizedBox(height: 50),
+            const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF6B35)),
+            ),
+            const SizedBox(height: 20),
+            const Text(
               'Chargement...',
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(fontSize: 14, color: Colors.grey),
             ),
           ],
         ),
@@ -85,4 +79,3 @@ class _splashState extends State<splash> {
     );
   }
 }
-
